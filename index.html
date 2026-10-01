@@ -114,6 +114,7 @@ button.refresh[disabled] { opacity: .55; }
 .eyebrow span { font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 500; }
 .legend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
 .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
+.legend i.sw { width: 11px; height: 9px; border: 0; border-radius: 2px; margin-right: 3px; }
 .chart { width: 100%; height: auto; display: block; }
 .chart text { font-family: var(--font-num); font-size: 10px; fill: var(--muted); }
 .chart text.band { font-family: var(--font-body); font-size: 9px; }
@@ -137,8 +138,10 @@ footer a { color: inherit; }
   <section class="chart-panel">
     <div class="eyebrow"><span>いまから24時間</span>
       <div class="legend">
-        <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>前日の同時刻</span>
-        <span><i style="border-color:var(--warm)"></i>予報</span>
+        <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>前日</span>
+        <span><i style="border-color:var(--fg)"></i>予報</span>
+        <span><i class="sw" style="background:var(--warm);opacity:.55"></i>暖かい</span>
+        <span><i class="sw" style="background:var(--cool);opacity:.55"></i>寒い</span>
       </div>
     </div>
     <svg class="chart" id="chart" viewBox="0 0 340 122" role="img" aria-label="これから24時間の気温予報と前日の同時刻の気温"></svg>
@@ -369,7 +372,7 @@ footer a { color: inherit; }
     const W = 340, H = 122, L = 26, R = 8, T = 16, B = 18;
     const x0 = now, x1 = now + 24;
     const xs = [], fut = [], past = [];
-    for (let i = x0; i <= x1 + 1e-6; i += 0.5) { xs.push(i); fut.push(at(i)); past.push(at(i - 24)); }
+    for (let i = x0; i <= x1 + 1e-6; i += 0.25) { xs.push(i); fut.push(at(i)); past.push(at(i - 24)); }
     const all = fut.concat(past).filter(v => v != null && !isNaN(v));
     let lo = Math.floor(Math.min(...all)) - 1, hi = Math.ceil(Math.max(...all)) + 1;
     const span = hi - lo, step = span > 16 ? 5 : span > 8 ? 2 : 1;
@@ -394,9 +397,39 @@ footer a { color: inherit; }
       s += '<text x="' + x(h) + '" y="' + (H - 4) + '" text-anchor="middle">' + lab + '</text>';
     }
     s += '<text x="' + x(x0) + '" y="' + (H - 4) + '" text-anchor="start">いま</text>';
-    s += '<path d="' + path(past) + '" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>';
-    s += '<path d="' + path(fut) + '" fill="none" stroke="var(--warm)" stroke-width="2.4" stroke-linejoin="round"/>';
-    s += '<circle cx="' + x(x0) + '" cy="' + yy(fut[0]) + '" r="4" fill="var(--warm)" stroke="var(--surface)" stroke-width="2"/>';
+    // 前日との差を塗る：暖かい時間はオレンジ、寒い時間は青。差が大きいほど濃く
+    const P = (i, v) => x(i).toFixed(1) + "," + yy(v).toFixed(1);
+    const poly = (pts, d) => {
+      const op = Math.min(0.12 + Math.abs(d) * 0.09, 0.6);
+      if (Math.abs(d) < 0.3) return "";
+      return '<polygon points="' + pts.join(" ") + '" fill="var(' + (d > 0 ? "--warm" : "--cool") + ')" fill-opacity="' + op.toFixed(2) + '"/>';
+    };
+    for (let k = 0; k < xs.length - 1; k++) {
+      const a = xs[k], b = xs[k + 1], f0 = fut[k], f1 = fut[k + 1], p0 = past[k], p1 = past[k + 1];
+      const d0 = f0 - p0, d1 = f1 - p1;
+      if (d0 * d1 < 0) {
+        const t = d0 / (d0 - d1), c = a + (b - a) * t, vc = f0 + (f1 - f0) * t;
+        s += poly([P(a, f0), P(c, vc), P(a, p0)], d0 / 2);
+        s += poly([P(c, vc), P(b, f1), P(b, p1)], d1 / 2);
+      } else {
+        s += poly([P(a, f0), P(b, f1), P(b, p1), P(a, p0)], (d0 + d1) / 2);
+      }
+    }
+    // 一番暖かい／寒い差に数字を添える
+    let iMax = 0, iMin = 0;
+    fut.forEach((v, k) => { const d = v - past[k]; if (d > fut[iMax] - past[iMax]) iMax = k; if (d < fut[iMin] - past[iMin]) iMin = k; });
+    [[iMax, "--warm"], [iMin, "--cool"]].forEach(([k, c]) => {
+      const d = fut[k] - past[k];
+      if (Math.abs(d) < 2 || (c === "--warm" && d < 0) || (c === "--cool" && d > 0)) return;
+      const above = d > 0;
+      const yv = above ? Math.max(fut[k], past[k]) : Math.min(fut[k], past[k]);
+      const ty = above ? yy(yv) - 5 : yy(yv) + 12;
+      const tx = Math.min(Math.max(x(xs[k]), L + 14), W - R - 14);
+      s += '<text x="' + tx + '" y="' + ty + '" text-anchor="middle" style="fill:var(' + c + ');font-weight:700;font-size:11px">' + (d > 0 ? "+" : "−") + Math.abs(d).toFixed(0) + '°</text>';
+    });
+    s += '<path d="' + path(past) + '" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="4 3"/>';
+    s += '<path d="' + path(fut) + '" fill="none" stroke="var(--fg)" stroke-width="2.2" stroke-linejoin="round"/>';
+    s += '<circle cx="' + x(x0) + '" cy="' + yy(fut[0]) + '" r="4" fill="var(--fg)" stroke="var(--surface)" stroke-width="2"/>';
     svg.innerHTML = s;
   }
 
