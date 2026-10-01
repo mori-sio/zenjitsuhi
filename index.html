@@ -23,6 +23,10 @@
   --muted: #5f6b7a;
   --line: #d5dbe3;
   --band: #f3f5f8;
+  --sun: #e9971a;
+  --cloud: #8a96a6;
+  --rain: #2f78c9;
+  --bolt: #e0b400;
   --warm: #c94d17;
   --warm-soft: #fbe6da;
   --cool: #2864ab;
@@ -36,12 +40,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #10151c; --surface: #18202a; --fg: #e8edf3; --muted: #93a0b0; --line: #2a3442; --band: #1d2631;
+    --sun: #ffbe45; --cloud: #a8b3c2; --rain: #6aaef5; --bolt: #ffd53d;
     --warm: #ff8b55; --warm-soft: #3a2419; --cool: #6eaaf2; --cool-soft: #182a40;
     --same: #a3afbd; --same-soft: #232c37; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #10151c; --surface: #18202a; --fg: #e8edf3; --muted: #93a0b0; --line: #2a3442; --band: #1d2631;
+  --sun: #ffbe45; --cloud: #a8b3c2; --rain: #6aaef5; --bolt: #ffd53d;
   --warm: #ff8b55; --warm-soft: #3a2419; --cool: #6eaaf2; --cool-soft: #182a40;
   --same: #a3afbd; --same-soft: #232c37; color-scheme: dark;
 }
@@ -73,20 +79,28 @@ button.refresh[disabled] { opacity: .55; }
   padding: 7px 12px 7px; display: grid; gap: 3px;
   border-left: 5px solid var(--tone);
 }
-.row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: start; }
+.left { display: grid; gap: 3px; min-width: 0; }
+.right { display: grid; justify-items: end; gap: 1px; }
+.wx { display: flex; align-items: center; gap: 4px; }
+.wx svg { width: 30px; height: 30px; flex: none; }
+.wx-text { display: grid; justify-items: end; line-height: 1.2; }
+.wx-text b { font-size: 12px; font-weight: 700; max-width: 6.5em; text-align: right; }
+.wx-text span { font-size: 11px; color: var(--muted); font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.wx[data-wet="1"] .wx-text b { color: var(--rain); }
 .when { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
 .when b { font-size: 17px; font-weight: 700; }
 .when small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .when .live { font-size: 10px; letter-spacing: .08em; color: var(--surface); background: var(--fg); border-radius: 4px; padding: 0 5px; align-self: center; }
 .abs { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .abs strong { font-family: var(--font-num); font-size: 20px; font-weight: 700; color: var(--fg); margin-left: 3px; font-variant-numeric: tabular-nums; }
-.row2 { display: flex; align-items: center; gap: 10px; }
+.row2 { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
 .num {
   font-family: var(--font-num); font-weight: 700; font-size: 36px; line-height: 1;
   font-variant-numeric: tabular-nums; color: var(--tone); white-space: nowrap;
 }
 .num small { font-size: 18px; font-weight: 600; }
-.feel { font-size: 15px; font-weight: 700; color: var(--tone); background: var(--tone-soft); border-radius: 7px; padding: 1px 9px; }
+.feel { white-space: nowrap; font-size: 14px; font-weight: 700; color: var(--tone); background: var(--tone-soft); border-radius: 7px; padding: 1px 9px; }
 .hints { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 13px; }
 .hint { display: flex; align-items: baseline; gap: 5px; }
 .hint i { font-style: normal; font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
@@ -137,8 +151,8 @@ footer a { color: inherit; }
 (() => {
   const LAT = 40.8081, LON = 140.4469;
   const URL_API = "https://api.open-meteo.com/v1/forecast?latitude=" + LAT + "&longitude=" + LON +
-    "&hourly=temperature_2m&current=temperature_2m&timezone=Asia%2FTokyo&past_days=1&forecast_days=3";
-  const CACHE_KEY = "gosho-zenjitsuhi-v2";
+    "&hourly=temperature_2m,weather_code,precipitation_probability,snowfall&current=temperature_2m&timezone=Asia%2FTokyo&past_days=1&forecast_days=3";
+  const CACHE_KEY = "gosho-zenjitsuhi-v3";
   const $ = id => document.getElementById(id);
   let lastFetch = 0;
 
@@ -216,11 +230,73 @@ footer a { color: inherit; }
     } else {
       out.push(["服装", clothes(v)]);
     }
+    const w = b.wx;
+    if (w) {
+      if (b.type === "yoru" && w.snow >= 3) out.push(["雪", "朝は雪かきが要りそう"]);
+      else if (b.type !== "yoru" && w.isWet && w.icon === "snow") out.push(["雪", "足元に注意。時間に余裕を"]);
+      else if (b.type !== "yoru" && (w.isWet || (w.prob != null && w.prob >= 50))) out.push(["傘", "持って出かけて"]);
+    }
     return out;
+  }
+
+  // 天気（WMOコード）
+  function wxCat(c) {
+    if (c == null) return null;
+    if (c >= 95) return "thunder";
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return "snow";
+    if ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) return "rain";
+    if (c >= 51 && c <= 57) return "drizzle";
+    if (c === 45 || c === 48) return "fog";
+    if (c === 3) return "cloudy";
+    if (c === 1 || c === 2) return "partly";
+    return "clear";
+  }
+  const WET = { thunder: 4, snow: 3, rain: 2, drizzle: 1 };
+  const NAME = { thunder: "雷雨", snow: "雪", rain: "雨", drizzle: "小雨", fog: "霧", cloudy: "曇り", partly: "晴れ時々曇り", clear: "晴れ" };
+  const SKY_SHORT = { clear: "晴れ", partly: "晴れ", cloudy: "曇り", fog: "曇り" };
+  function wxSummary(R, wx, pp, sf, night) {
+    const cats = R.map(h => wxCat(wx ? wx[h] : null)).filter(Boolean);
+    if (!cats.length) return null;
+    const wet = cats.filter(c => WET[c]);
+    const dry = cats.filter(c => !WET[c]);
+    const count = {}; dry.forEach(c => count[c] = (count[c] || 0) + 1);
+    const sky = Object.keys(count).sort((a, b) => count[b] - count[a])[0] || "cloudy";
+    const probs = pp ? R.map(h => pp[h]).filter(v => v != null) : [];
+    const prob = probs.length ? Math.max(...probs) : null;
+    const snow = sf ? R.reduce((t, h) => t + (sf[h] || 0), 0) : 0;
+    let icon, label, isWet = false;
+    if (wet.length) {
+      const worst = wet.reduce((a, b) => WET[b] > WET[a] ? b : a);
+      icon = worst; isWet = true;
+      label = wet.length / cats.length >= 0.5 ? NAME[worst] : SKY_SHORT[sky] + "時々" + NAME[worst];
+    } else {
+      icon = sky === "clear" && night ? "moon" : sky === "partly" && night ? "cloudy" : sky;
+      label = NAME[sky];
+    }
+    const detail = [];
+    if (prob != null && (isWet || prob >= 30)) detail.push(prob + "%");
+    if (snow >= 1) detail.push(Math.round(snow) + "cm");
+    return { icon, label, detail: detail.join(" "), isWet, prob, snow };
+  }
+  const CLOUD = '<path d="M7 19h10.5a4 4 0 0 0 .4-7.98A5.5 5.5 0 0 0 7.3 10.6 4.2 4.2 0 0 0 7 19z" fill="var(--surface)" stroke="var(--cloud)" stroke-width="1.8" stroke-linejoin="round"/>';
+  const CLOUD_HI = '<g transform="translate(0 -3)">' + CLOUD + '</g>';
+  const SUN_RAYS = r => { let g = ""; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g += '<line x1="' + (12 + Math.cos(a) * (r + 2.2)).toFixed(1) + '" y1="' + (12 + Math.sin(a) * (r + 2.2)).toFixed(1) + '" x2="' + (12 + Math.cos(a) * (r + 4.6)).toFixed(1) + '" y2="' + (12 + Math.sin(a) * (r + 4.6)).toFixed(1) + '" stroke="var(--sun)" stroke-width="1.8" stroke-linecap="round"/>'; } return g; };
+  function wxIcon(kind) {
+    let g = "";
+    if (kind === "clear") g = SUN_RAYS(4.5) + '<circle cx="12" cy="12" r="4.5" fill="var(--sun)"/>';
+    else if (kind === "moon") g = '<path d="M15.5 4.5a7.5 7.5 0 1 0 4 13.4A6 6 0 0 1 15.5 4.5z" fill="var(--sun)"/>';
+    else if (kind === "partly") g = '<g transform="translate(-3.5 -3.5) scale(.85)">' + SUN_RAYS(4) + '<circle cx="12" cy="12" r="4" fill="var(--sun)"/></g>' + '<g transform="translate(2 2) scale(.9)">' + CLOUD + '</g>';
+    else if (kind === "cloudy") g = CLOUD;
+    else if (kind === "fog") g = '<g stroke="var(--cloud)" stroke-width="2" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="3" y1="12.5" x2="18" y2="12.5"/><line x1="6" y1="17" x2="21" y2="17"/></g>';
+    else if (kind === "rain" || kind === "drizzle") g = CLOUD_HI + '<g stroke="var(--rain)" stroke-width="1.9" stroke-linecap="round"><line x1="8.5" y1="19" x2="7.3" y2="22"/>' + (kind === "rain" ? '<line x1="12.5" y1="19" x2="11.3" y2="22"/>' : '') + '<line x1="16.5" y1="19" x2="15.3" y2="22"/></g>';
+    else if (kind === "snow") g = CLOUD_HI + '<g fill="var(--rain)"><circle cx="8" cy="20.5" r="1.3"/><circle cx="12" cy="22" r="1.3"/><circle cx="16" cy="20.5" r="1.3"/></g>';
+    else if (kind === "thunder") g = CLOUD_HI + '<path d="M12.5 15.5l-3 4.5h2.5l-1.5 3.5 4-5h-2.5l1.5-3z" fill="var(--bolt)"/>';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + g + '</svg>';
   }
 
   function render(data, fetchedAt) {
     const times = data.hourly.time, temps = data.hourly.temperature_2m;
+    const wx = data.hourly.weather_code, pp = data.hourly.precipitation_probability, sf = data.hourly.snowfall;
     const curTime = (data.current && data.current.time) || null;
     const firstDate = times[0].slice(0, 10);                 // 昨日
     const todayStr = curTime ? curTime.slice(0, 10) : times[24].slice(0, 10);
@@ -253,6 +329,7 @@ footer a { color: inherit; }
           live: R[0] < now, startsAfterNow: R[0] >= now,
           value, delta: value - base,
           name: blockName(t.key, off), base: baseName(t.key, off),
+          wx: wxSummary(R, wx, pp, sf, t.key === "yoru"),
           range: (R[0] % 24) + "〜" + ((R[R.length - 1] + 1) % 24) + "時",
         });
       });
@@ -267,11 +344,15 @@ footer a { color: inherit; }
       el.className = "block";
       el.dataset.tone = tone(b.delta);
       const hints = hintsFor(b, { blocks, nowTemp });
+      const w = b.wx;
       el.innerHTML =
-        '<div class="row1"><div class="when"><b>' + b.name + '</b><small>' + b.range + '</small>' +
-        (b.live ? '<span class="live">いま</span>' : '') + '</div>' +
-        '<div class="abs">' + METRIC_LABEL[b.metric] + '<strong>' + Math.round(b.value) + '℃</strong></div></div>' +
+        '<div class="top"><div class="left">' +
+        '<div class="when"><b>' + b.name + '</b><small>' + b.range + '</small>' + (b.live ? '<span class="live">いま</span>' : '') + '</div>' +
         '<div class="row2"><div class="num">' + fmt(b.delta) + '<small>℃</small></div><div class="feel">' + feelText(b.delta, b.value, b.type, b.base) + '</div></div>' +
+        '</div><div class="right">' +
+        '<div class="abs">' + METRIC_LABEL[b.metric] + '<strong>' + Math.round(b.value) + '℃</strong></div>' +
+        (w ? '<div class="wx" data-wet="' + (w.isWet ? 1 : 0) + '">' + wxIcon(w.icon) + '<div class="wx-text"><b>' + w.label + '</b>' + (w.detail ? '<span>' + w.detail + '</span>' : '') + '</div></div>' : '') +
+        '</div></div>' +
         '<div class="hints">' + hints.map(h => '<span class="hint"><i>' + h[0] + '</i>' + h[1] + '</span>').join("") + '</div>';
       wrap.appendChild(el);
     });
