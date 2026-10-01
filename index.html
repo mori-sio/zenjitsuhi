@@ -15,13 +15,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* Layout: one screen on an iPhone (390×~760). Two compact comparison panels (昨日→今日, 今日→明日) and a 24h chart, no scrolling. */
+/* Layout: one iPhone screen. The next 24h split into life blocks (朝・昼・夕方・夜), each a row with its 前日比 and what to do; a 24h chart below. */
 :root {
   --bg: #eef1f4;
   --surface: #ffffff;
   --fg: #1b2430;
   --muted: #5f6b7a;
   --line: #d5dbe3;
+  --band: #f3f5f8;
   --warm: #c94d17;
   --warm-soft: #fbe6da;
   --cool: #2864ab;
@@ -34,13 +35,13 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #10151c; --surface: #18202a; --fg: #e8edf3; --muted: #93a0b0; --line: #2a3442;
+    --bg: #10151c; --surface: #18202a; --fg: #e8edf3; --muted: #93a0b0; --line: #2a3442; --band: #1d2631;
     --warm: #ff8b55; --warm-soft: #3a2419; --cool: #6eaaf2; --cool-soft: #182a40;
     --same: #a3afbd; --same-soft: #232c37; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #10151c; --surface: #18202a; --fg: #e8edf3; --muted: #93a0b0; --line: #2a3442;
+  --bg: #10151c; --surface: #18202a; --fg: #e8edf3; --muted: #93a0b0; --line: #2a3442; --band: #1d2631;
   --warm: #ff8b55; --warm-soft: #3a2419; --cool: #6eaaf2; --cool-soft: #182a40;
   --same: #a3afbd; --same-soft: #232c37; color-scheme: dark;
 }
@@ -56,7 +57,7 @@ body {
 .wrap { max-width: 480px; margin: 0 auto; padding-inline: 14px; padding-block: 8px 10px; display: grid; gap: 8px; }
 
 header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.place { display: flex; align-items: baseline; gap: 8px; }
+.place { display: grid; line-height: 1.25; }
 .place b { font-size: 17px; font-weight: 700; letter-spacing: .02em; }
 .place small { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 button.refresh {
@@ -66,93 +67,67 @@ button.refresh {
 button.refresh:focus-visible { outline: 2px solid var(--cool); outline-offset: 2px; }
 button.refresh[disabled] { opacity: .55; }
 
-.panel {
-  background: var(--surface); border-radius: 16px; padding: 10px 12px 10px;
-  display: grid; gap: 7px; border: 1px solid var(--line);
+.blocks { display: grid; gap: 6px; }
+.block {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 7px 12px 7px; display: grid; gap: 3px;
+  border-left: 5px solid var(--tone);
 }
-.eyebrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.eyebrow span { font-size: 11px; letter-spacing: .1em; color: var(--muted); font-weight: 500; }
-.eyebrow em { font-style: normal; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-.hero { display: flex; align-items: center; gap: 12px; }
+.row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.when { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.when b { font-size: 17px; font-weight: 700; }
+.when small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.when .live { font-size: 10px; letter-spacing: .08em; color: var(--surface); background: var(--fg); border-radius: 4px; padding: 0 5px; align-self: center; }
+.abs { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.abs strong { font-family: var(--font-num); font-size: 20px; font-weight: 700; color: var(--fg); margin-left: 3px; font-variant-numeric: tabular-nums; }
+.row2 { display: flex; align-items: center; gap: 10px; }
 .num {
-  font-family: var(--font-num); font-weight: 700; font-size: 56px; line-height: .92;
-  letter-spacing: -.01em; font-variant-numeric: tabular-nums; color: var(--tone); white-space: nowrap;
+  font-family: var(--font-num); font-weight: 700; font-size: 36px; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--tone); white-space: nowrap;
 }
-.num small { font-size: 24px; font-weight: 600; margin-left: 1px; }
-.side { display: grid; gap: 3px; min-width: 0; justify-items: start; }
-.feel {
-  font-size: 16px; font-weight: 700; color: var(--tone); background: var(--tone-soft);
-  border-radius: 7px; padding: 1px 9px;
-}
-.wear { font-size: 13px; }
-.meta { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.ext { display: flex; gap: 10px; }
-.ext b { font-family: var(--font-num); font-size: 14px; font-weight: 700; color: var(--tone); margin-left: 3px; }
+.num small { font-size: 18px; font-weight: 600; }
+.feel { font-size: 15px; font-weight: 700; color: var(--tone); background: var(--tone-soft); border-radius: 7px; padding: 1px 9px; }
+.hints { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 13px; }
+.hint { display: flex; align-items: baseline; gap: 5px; }
+.hint i { font-style: normal; font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
 
 [data-tone="warm"] { --tone: var(--warm); --tone-soft: var(--warm-soft); }
 [data-tone="cool"] { --tone: var(--cool); --tone-soft: var(--cool-soft); }
 [data-tone="same"] { --tone: var(--same); --tone-soft: var(--same-soft); }
 
-.slots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
-.slot {
-  border-radius: 9px; background: var(--tone-soft); padding: 3px 1px 3px;
-  display: grid; justify-items: center; text-align: center; line-height: 1.15;
-}
-.slot .h { font-size: 10px; color: var(--muted); }
-.slot .d { font-family: var(--font-num); font-weight: 700; font-size: 17px; color: var(--tone); font-variant-numeric: tabular-nums; }
-.slot .t { font-family: var(--font-num); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.slot.now { outline: 2px solid var(--tone); outline-offset: -2px; }
-
-.chart-panel { gap: 2px; padding-bottom: 6px; }
+.chart-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px 4px; display: grid; gap: 2px; }
+.eyebrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.eyebrow span { font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 500; }
 .legend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
 .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
 .chart { width: 100%; height: auto; display: block; }
 .chart text { font-family: var(--font-num); font-size: 10px; fill: var(--muted); }
+.chart text.band { font-family: var(--font-body); font-size: 9px; }
 
 .msg { font-size: 12px; color: var(--warm); }
 footer { font-size: 10px; color: var(--muted); text-align: center; }
 footer a { color: inherit; }
-@media (max-width: 360px) { .num { font-size: 48px; } .slot .d { font-size: 15px; } }
+@media (max-width: 360px) { .num { font-size: 34px; } .hints { font-size: 12px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="place"><b>五所川原</b><small id="updated">読み込み中…</small></div>
+    <div class="place"><b>五所川原 これからの24時間</b><small id="updated">読み込み中…</small></div>
     <button class="refresh" id="refresh" type="button">更新</button>
   </header>
   <div class="msg" id="msg" hidden></div>
 
-  <section class="panel" id="p-today" data-tone="same">
-    <div class="eyebrow"><span>いま ／ 昨日の同じ時刻と比べて</span><em id="t-now"></em></div>
-    <div class="hero">
-      <div class="num" id="t-num">—</div>
-      <div class="side"><div class="feel" id="t-feel">…</div><div class="wear" id="t-wear"></div></div>
-    </div>
-    <div class="meta"><span id="t-sub"></span><span class="ext" id="t-ext"></span></div>
-    <div class="slots" id="t-slots"></div>
-  </section>
+  <div class="blocks" id="blocks"></div>
 
-  <section class="panel" id="p-tomorrow" data-tone="same">
-    <div class="eyebrow"><span>明日 ／ 今日の同じ時刻と比べて</span><em id="m-date"></em></div>
-    <div class="hero">
-      <div class="num" id="m-num">—</div>
-      <div class="side"><div class="feel" id="m-feel">…</div><div class="wear" id="m-wear"></div></div>
-    </div>
-    <div class="meta"><span id="m-sub"></span><span class="ext" id="m-ext"></span></div>
-    <div class="slots" id="m-slots"></div>
-  </section>
-
-  <section class="panel chart-panel">
-    <div class="eyebrow"><span>3日間の気温</span>
+  <section class="chart-panel">
+    <div class="eyebrow"><span>いまから24時間</span>
       <div class="legend">
-        <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>昨日</span>
-        <span><i style="border-color:var(--fg)"></i>今日</span>
-        <span><i style="border-color:var(--warm)"></i>明日</span>
+        <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>前日の同時刻</span>
+        <span><i style="border-color:var(--warm)"></i>予報</span>
       </div>
     </div>
-    <svg class="chart" id="chart" viewBox="0 0 340 150" role="img" aria-label="昨日・今日・明日の時間別気温"></svg>
+    <svg class="chart" id="chart" viewBox="0 0 340 122" role="img" aria-label="これから24時間の気温予報と前日の同時刻の気温"></svg>
   </section>
 
   <footer>データ：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（気象モデル値）</footer>
@@ -162,148 +137,186 @@ footer a { color: inherit; }
 (() => {
   const LAT = 40.8081, LON = 140.4469;
   const URL_API = "https://api.open-meteo.com/v1/forecast?latitude=" + LAT + "&longitude=" + LON +
-    "&hourly=temperature_2m&current=temperature_2m&timezone=Asia%2FTokyo&past_days=1&forecast_days=2";
-  const CACHE_KEY = "gosho-zenjitsuhi-v1";
-  const SLOT_HOURS = [6, 9, 12, 15, 18, 21];
+    "&hourly=temperature_2m&current=temperature_2m&timezone=Asia%2FTokyo&past_days=1&forecast_days=3";
+  const CACHE_KEY = "gosho-zenjitsuhi-v2";
   const $ = id => document.getElementById(id);
   let lastFetch = 0;
 
+  // 生活の時間帯（時刻は0〜29で、24以上は翌日）
+  const TYPES = [
+    { key: "asa",  s: 6,  e: 9,  metric: "min",  short: "朝" },
+    { key: "hiru", s: 11, e: 15, metric: "max",  short: "昼" },
+    { key: "yu",   s: 16, e: 19, metric: "mean", short: "夕" },
+    { key: "yoru", s: 22, e: 29, metric: "min",  short: "夜" },
+  ];
+  const METRIC_LABEL = { min: "最低", max: "最高", mean: "平均" };
+
   const fmt = d => (d > 0.05 ? "+" : d < -0.05 ? "−" : "±") + Math.abs(d).toFixed(1);
-  const fmtShort = d => {
-    const r = Math.round(d);
-    return r > 0 ? "+" + r : r < 0 ? "−" + Math.abs(r) : "±0";
-  };
   const tone = d => (d >= 1 ? "warm" : d <= -1 ? "cool" : "same");
-  function feel(d) {
+
+  function blockName(type, off) {
+    if (type === "yoru") return off <= 0 ? "今夜" : "明日の夜";
+    const day = off <= 0 ? "今日の" : "明日の";
+    if (type === "asa") return off <= 0 ? "けさ" : "明日の朝";
+    if (type === "hiru") return day + "昼";
+    return day + "夕方";
+  }
+  function baseName(type, off) {
+    if (type === "yoru") return off <= 0 ? "昨夜" : "今夜";
+    if (type === "asa") return off <= 0 ? "昨日の朝" : "けさ";
+    return off <= 0 ? "昨日" : "今日";
+  }
+  function feelText(d, v, type, base) {
     const a = Math.abs(d);
-    if (a < 1) return "ほぼ同じ";
-    if (d > 0) return a < 2.5 ? "少し暖かい" : a < 5 ? "暖かい" : a < 8 ? "かなり暖かい" : "季節が戻った暖かさ";
-    return a < 2.5 ? "少しひんやり" : a < 5 ? "寒い" : a < 8 ? "かなり寒い" : "冬のような寒さ";
-  }
-  function wear(d, base) {
-    if (d <= -5) return base + "より2枚分厚着を";
-    if (d <= -2.5) return base + "より1枚多めに";
-    if (d >= 5) return base + "より2枚分軽くてOK";
-    if (d >= 2.5) return base + "より1枚少なめでOK";
-    return base + "と同じ服装でOK";
-  }
-
-  function byDay(data) {
-    const days = {};
-    data.hourly.time.forEach((t, i) => {
-      const [date, hm] = t.split("T");
-      const h = parseInt(hm.slice(0, 2), 10);
-      (days[date] ||= new Array(24).fill(null))[h] = data.hourly.temperature_2m[i];
-    });
-    return days;
-  }
-  function at(arr, fh) {
-    const h = Math.floor(fh), f = fh - h;
-    const a = arr[h], b = h < 23 ? arr[h + 1] : arr[h];
-    if (a == null) return null;
-    if (b == null) return a;
-    return a + (b - a) * f;
-  }
-  const maxOf = a => Math.max(...a.filter(v => v != null));
-  const minOf = a => Math.min(...a.filter(v => v != null));
-  function shiftDate(s, n) {
-    const d = new Date(s + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n);
-    return d.toISOString().slice(0, 10);
-  }
-  const jpDate = s => { const [, m, d] = s.split("-"); const w = "日月火水木金土"[new Date(s + "T12:00:00Z").getUTCDay()]; return (+m) + "/" + (+d) + "（" + w + "）"; };
-
-  function renderSlots(el, cur, prev, nowH) {
-    el.innerHTML = "";
-    SLOT_HOURS.forEach(h => {
-      const c = cur[h], p = prev[h];
-      const div = document.createElement("div");
-      div.className = "slot";
-      if (c == null || p == null) { div.dataset.tone = "same"; div.innerHTML = '<span class="h">' + h + '時</span><span class="d">—</span>'; el.appendChild(div); return; }
-      const d = c - p;
-      div.dataset.tone = tone(d);
-      if (nowH != null && Math.abs(h - nowH) < 1.5) div.classList.add("now");
-      div.innerHTML = '<span class="h">' + h + '時</span><span class="d">' + fmtShort(d) + '</span><span class="t">' + Math.round(c) + '°</span>';
-      div.title = h + "時 " + c.toFixed(1) + "℃（比較 " + p.toFixed(1) + "℃）";
-      el.appendChild(div);
-    });
-  }
-  function renderExt(el, cur, prev) {
-    const dMax = maxOf(cur) - maxOf(prev), dMin = minOf(cur) - minOf(prev);
-    el.innerHTML =
-      '<span data-tone="' + tone(dMax) + '">最高' + Math.round(maxOf(cur)) + '°<b>' + fmt(dMax) + '</b></span>' +
-      '<span data-tone="' + tone(dMin) + '">最低' + Math.round(minOf(cur)) + '°<b>' + fmt(dMin) + '</b></span>';
-  }
-
-  function renderChart(y, t, m, nowH) {
-    const svg = $("chart");
-    const W = 340, H = 150, L = 26, R = 8, T = 8, B = 18;
-    const all = [...y, ...t, ...m].filter(v => v != null);
-    let lo = Math.floor(Math.min(...all)) - 1, hi = Math.ceil(Math.max(...all)) + 1;
-    const span = hi - lo, step = span > 16 ? 5 : span > 8 ? 2 : 1;
-    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
-    const x = h => L + (W - L - R) * h / 23;
-    const yy = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
-    const path = arr => arr.map((v, h) => v == null ? null : [x(h), yy(v)]).filter(Boolean)
-      .map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-    let s = "";
-    for (let v = lo; v <= hi; v += step) {
-      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy(v) + '" y2="' + yy(v) + '" stroke="var(--line)" stroke-width="1"/>';
-      s += '<text x="' + (L - 5) + '" y="' + (yy(v) + 3.5) + '" text-anchor="end">' + v + '°</text>';
+    if (a < 1) return base + "とほぼ同じ";
+    let w;
+    if (d > 0) {
+      const hot = v >= 22;
+      w = a < 2.5 ? (hot ? "少し暑い" : "少し暖かい") : a < 5 ? (hot ? "暑い" : "暖かい") : (hot ? "かなり暑い" : "かなり暖かい");
+    } else {
+      const chill = (type === "yoru" || type === "asa") ? "冷える" : "寒い";
+      w = a < 2.5 ? "少し" + chill : a < 5 ? chill : "かなり" + chill;
     }
-    [0, 6, 12, 18, 23].forEach(h => {
-      s += '<text x="' + x(h) + '" y="' + (H - 4) + '" text-anchor="' + (h === 23 ? "end" : h === 0 ? "start" : "middle") + '">' + h + '時</text>';
-    });
-    if (nowH != null) s += '<line x1="' + x(nowH) + '" x2="' + x(nowH) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"/>';
-    s += '<path d="' + path(y) + '" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="4 3"/>';
-    s += '<path d="' + path(t) + '" fill="none" stroke="var(--fg)" stroke-width="2.2" stroke-linejoin="round"/>';
-    s += '<path d="' + path(m) + '" fill="none" stroke="var(--warm)" stroke-width="2.2" stroke-linejoin="round"/>';
-    if (nowH != null) { const v = at(t, nowH); if (v != null) s += '<circle cx="' + x(nowH) + '" cy="' + yy(v) + '" r="4" fill="var(--fg)" stroke="var(--surface)" stroke-width="2"/>'; }
-    svg.innerHTML = s;
+    return base + "より" + w;
+  }
+  function clothes(v) {
+    if (v >= 25) return "半袖でOK";
+    if (v >= 20) return "長袖1枚";
+    if (v >= 15) return "薄手の上着";
+    if (v >= 10) return "上着が必要";
+    if (v >= 5) return "コート";
+    return "厚手のコート";
+  }
+  function hintsFor(b, ctx) {
+    const v = b.value, d = b.delta, out = [];
+    if (b.type === "yoru") {
+      let s;
+      if (v >= 24) s = "寝苦しい夜。冷房を";
+      else if (v >= 21) s = "暑ければ冷房弱めで";
+      else if (v <= 8) s = "冷え込む。暖房を";
+      else if (d <= -2.5) s = "昨夜より冷える。暖房か布団を足して";
+      else if (d >= 2.5) s = "昨夜より暖かい。布団は軽めに";
+      else s = "昨夜と同じ設定でOK";
+      out.push(["寝室", s]);
+    } else if (b.type === "hiru") {
+      out.push(["服装", clothes(v)]);
+      let s = null;
+      if (v >= 28) s = "冷房つけて出かけて";
+      else if (v >= 25) s = "冷房つけておくと安心";
+      else if (v <= 5) s = "暖房つけておくと安心";
+      out.push(["犬の留守番", s || "エアコンなしで大丈夫そう"]);
+      if (ctx.nowTemp != null && b.startsAfterNow && b.off <= 0) {
+        const up = v - ctx.nowTemp;
+        if (up >= 5) out.push(["いまから", "+" + Math.round(up) + "℃上がる"]);
+      }
+    } else if (b.type === "asa") {
+      out.push(["服装", clothes(v)]);
+      const noon = ctx.blocks.find(x => x.type === "hiru" && x.dayIdx === b.dayIdx);
+      if (noon && noon.value - v >= 7) out.push(["日中", "昼は" + Math.round(noon.value) + "℃まで上がる。脱げる服で"]);
+    } else {
+      out.push(["服装", clothes(v)]);
+    }
+    return out;
   }
 
   function render(data, fetchedAt) {
-    const days = byDay(data);
+    const times = data.hourly.time, temps = data.hourly.temperature_2m;
     const curTime = (data.current && data.current.time) || null;
-    const todayStr = curTime ? curTime.slice(0, 10) : Object.keys(days).sort()[1];
-    const yStr = shiftDate(todayStr, -1), mStr = shiftDate(todayStr, 1);
-    const Y = days[yStr], T = days[todayStr], M = days[mStr];
-    if (!Y || !T || !M) throw new Error("data");
+    const firstDate = times[0].slice(0, 10);                 // 昨日
+    const todayStr = curTime ? curTime.slice(0, 10) : times[24].slice(0, 10);
+    if (times[24].slice(0, 10) !== todayStr) throw new Error("dates");
+    if (temps.length < 96) throw new Error("short");
 
+    // いまの時刻（index: 0 = 昨日0時）
     const nowJst = new Date(Date.now() + 9 * 3600e3);
     const nowDate = nowJst.toISOString().slice(0, 10);
     let fh = nowJst.getUTCHours() + nowJst.getUTCMinutes() / 60;
     if (nowDate !== todayStr && curTime) fh = +curTime.slice(11, 13) + +curTime.slice(14, 16) / 60;
-    fh = Math.min(fh, 23);
-    const hm = String(Math.floor(fh)).padStart(2, "0") + ":" + String(Math.round((fh % 1) * 60)).padStart(2, "0");
+    const now = 24 + fh;
+    const at = i => { const h = Math.floor(i), f = i - h; const a = temps[h], b = temps[h + 1]; return b == null ? a : a + (b - a) * f; };
+    const nowTemp = (data.current && data.current.temperature_2m != null && nowDate === todayStr) ? data.current.temperature_2m : at(now);
 
-    const nowTemp = (data.current && data.current.temperature_2m != null && nowDate === todayStr) ? data.current.temperature_2m : at(T, fh);
-    const yThen = at(Y, fh);
-    const d1 = nowTemp - yThen;
-    $("p-today").dataset.tone = tone(d1);
-    $("t-now").textContent = jpDate(todayStr) + " " + hm;
-    $("t-num").innerHTML = fmt(d1) + "<small>℃</small>";
-    $("t-feel").textContent = feel(d1);
-    $("t-sub").textContent = "いま" + nowTemp.toFixed(1) + "℃ ／ 昨日" + yThen.toFixed(1) + "℃";
-    $("t-wear").textContent = wear(d1, "昨日");
-    renderSlots($("t-slots"), T, Y, fh);
-    renderExt($("t-ext"), T, Y);
+    // これから24時間にかかる時間帯を集める
+    const blocks = [];
+    for (let dayIdx = 0; dayIdx <= 2; dayIdx++) {
+      TYPES.forEach(t => {
+        const hours = [];
+        for (let h = dayIdx * 24 + t.s; h <= dayIdx * 24 + t.e; h++) hours.push(h);
+        const R = hours.filter(h => h + 1 > now);
+        if (!R.length || R[0] > now + 24 || R[0] - 24 < 0 || R[R.length - 1] >= temps.length) return;
+        const cur = R.map(h => temps[h]), prev = R.map(h => temps[h - 24]);
+        const agg = a => t.metric === "min" ? Math.min(...a) : t.metric === "max" ? Math.max(...a) : a.reduce((x, y) => x + y, 0) / a.length;
+        const value = agg(cur), base = agg(prev);
+        const off = Math.floor(hours[0] / 24) - 1;   // 開始日の今日からの差
+        blocks.push({
+          type: t.key, metric: t.metric, short: t.short, dayIdx, off, R,
+          live: R[0] < now, startsAfterNow: R[0] >= now,
+          value, delta: value - base,
+          name: blockName(t.key, off), base: baseName(t.key, off),
+          range: (R[0] % 24) + "〜" + ((R[R.length - 1] + 1) % 24) + "時",
+        });
+      });
+    }
+    blocks.sort((a, b) => a.R[0] - b.R[0]);
+    const shown = blocks.slice(0, 4);
 
-    const mThen = at(M, fh), tThen = at(T, fh);
-    const d2 = mThen - tThen;
-    $("p-tomorrow").dataset.tone = tone(d2);
-    $("m-date").textContent = jpDate(mStr) + " " + hm;
-    $("m-num").innerHTML = fmt(d2) + "<small>℃</small>";
-    $("m-feel").textContent = feel(d2);
-    $("m-sub").textContent = "明日" + mThen.toFixed(1) + "℃ ／ 今日" + tThen.toFixed(1) + "℃";
-    $("m-wear").textContent = wear(d2, "今日");
-    renderSlots($("m-slots"), M, T, null);
-    renderExt($("m-ext"), M, T);
+    const wrap = $("blocks");
+    wrap.innerHTML = "";
+    shown.forEach(b => {
+      const el = document.createElement("section");
+      el.className = "block";
+      el.dataset.tone = tone(b.delta);
+      const hints = hintsFor(b, { blocks, nowTemp });
+      el.innerHTML =
+        '<div class="row1"><div class="when"><b>' + b.name + '</b><small>' + b.range + '</small>' +
+        (b.live ? '<span class="live">いま</span>' : '') + '</div>' +
+        '<div class="abs">' + METRIC_LABEL[b.metric] + '<strong>' + Math.round(b.value) + '℃</strong></div></div>' +
+        '<div class="row2"><div class="num">' + fmt(b.delta) + '<small>℃</small></div><div class="feel">' + feelText(b.delta, b.value, b.type, b.base) + '</div></div>' +
+        '<div class="hints">' + hints.map(h => '<span class="hint"><i>' + h[0] + '</i>' + h[1] + '</span>').join("") + '</div>';
+      wrap.appendChild(el);
+    });
 
-    renderChart(Y, T, M, fh);
+    renderChart(now, at, shown);
 
     const f = new Date(fetchedAt + 9 * 3600e3);
-    $("updated").textContent = "更新 " + (f.getUTCMonth() + 1) + "/" + f.getUTCDate() + " " +
+    $("updated").textContent = "前日の同じ時間帯と比べて ・ 更新 " + (f.getUTCMonth() + 1) + "/" + f.getUTCDate() + " " +
       String(f.getUTCHours()).padStart(2, "0") + ":" + String(f.getUTCMinutes()).padStart(2, "0");
+  }
+
+  function renderChart(now, at, shown) {
+    const svg = $("chart");
+    const W = 340, H = 122, L = 26, R = 8, T = 16, B = 18;
+    const x0 = now, x1 = now + 24;
+    const xs = [], fut = [], past = [];
+    for (let i = x0; i <= x1 + 1e-6; i += 0.5) { xs.push(i); fut.push(at(i)); past.push(at(i - 24)); }
+    const all = fut.concat(past).filter(v => v != null && !isNaN(v));
+    let lo = Math.floor(Math.min(...all)) - 1, hi = Math.ceil(Math.max(...all)) + 1;
+    const span = hi - lo, step = span > 16 ? 5 : span > 8 ? 2 : 1;
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    const x = i => L + (W - L - R) * (i - x0) / 24;
+    const yy = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+    const path = arr => arr.map((v, k) => (k ? "L" : "M") + x(xs[k]).toFixed(1) + " " + yy(v).toFixed(1)).join(" ");
+    let s = "";
+    shown.forEach(b => {
+      const a = Math.max(x0, b.R[0]), z = Math.min(x1, b.R[b.R.length - 1] + 1);
+      if (z <= a) return;
+      s += '<rect x="' + x(a) + '" y="' + (T - 2) + '" width="' + (x(z) - x(a)) + '" height="' + (H - T - B + 2) + '" fill="var(--band)"/>';
+      s += '<text class="band" x="' + ((x(a) + x(z)) / 2) + '" y="' + (T - 5) + '" text-anchor="middle">' + b.short + '</text>';
+    });
+    for (let v = lo; v <= hi; v += step) {
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy(v) + '" y2="' + yy(v) + '" stroke="var(--line)" stroke-width="1"/>';
+      s += '<text x="' + (L - 5) + '" y="' + (yy(v) + 3.5) + '" text-anchor="end">' + v + '°</text>';
+    }
+    for (let h = Math.ceil(x0 / 6) * 6; h <= x1; h += 6) {
+      if (h - x0 < 2.5 || x1 - h < 1) continue;
+      const lab = (h % 24) + "時";
+      s += '<text x="' + x(h) + '" y="' + (H - 4) + '" text-anchor="middle">' + lab + '</text>';
+    }
+    s += '<text x="' + x(x0) + '" y="' + (H - 4) + '" text-anchor="start">いま</text>';
+    s += '<path d="' + path(past) + '" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    s += '<path d="' + path(fut) + '" fill="none" stroke="var(--warm)" stroke-width="2.4" stroke-linejoin="round"/>';
+    s += '<circle cx="' + x(x0) + '" cy="' + yy(fut[0]) + '" r="4" fill="var(--warm)" stroke="var(--surface)" stroke-width="2"/>';
+    svg.innerHTML = s;
   }
 
   function showMsg(t) { const m = $("msg"); m.textContent = t || ""; m.hidden = !t; }
