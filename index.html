@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* Layout: one narrow column, two comparison panels (昨日→今日, 今日→明日), then a 24h chart. The big signed number is the hero. */
+/* Layout: one screen on an iPhone (390×~760). Two compact comparison panels (昨日→今日, 今日→明日) and a 24h chart, no scrolling. */
 :root {
   --bg: #eef1f4;
   --surface: #ffffff;
@@ -48,76 +48,72 @@
 html, body { margin: 0; }
 body {
   background: var(--bg); color: var(--fg);
-  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  font-family: var(--font-body); font-size: 14px; line-height: 1.45;
   -webkit-text-size-adjust: 100%;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.wrap { max-width: 480px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 28px; display: grid; gap: 14px; }
+.wrap { max-width: 480px; margin: 0 auto; padding-inline: 14px; padding-block: 8px 10px; display: grid; gap: 8px; }
 
-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.place { display: grid; }
-.place b { font-size: 19px; font-weight: 700; letter-spacing: .02em; }
-.place small { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.place { display: flex; align-items: baseline; gap: 8px; }
+.place b { font-size: 17px; font-weight: 700; letter-spacing: .02em; }
+.place small { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 button.refresh {
-  font: inherit; font-size: 13px; color: var(--fg); background: var(--surface);
-  border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  font: inherit; font-size: 12px; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer;
 }
 button.refresh:focus-visible { outline: 2px solid var(--cool); outline-offset: 2px; }
 button.refresh[disabled] { opacity: .55; }
 
 .panel {
-  background: var(--surface); border-radius: 18px; padding: 16px 16px 14px;
-  display: grid; gap: 12px; border: 1px solid var(--line);
+  background: var(--surface); border-radius: 16px; padding: 10px 12px 10px;
+  display: grid; gap: 7px; border: 1px solid var(--line);
 }
 .eyebrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.eyebrow span { font-size: 12px; letter-spacing: .12em; color: var(--muted); font-weight: 500; }
-.eyebrow em { font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.eyebrow span { font-size: 11px; letter-spacing: .1em; color: var(--muted); font-weight: 500; }
+.eyebrow em { font-style: normal; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-.hero { display: grid; gap: 2px; }
-.hero .lead { font-size: 14px; color: var(--muted); }
-.big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hero { display: flex; align-items: center; gap: 12px; }
 .num {
-  font-family: var(--font-num); font-weight: 700; font-size: 76px; line-height: .95;
-  letter-spacing: -.01em; font-variant-numeric: tabular-nums; color: var(--tone);
+  font-family: var(--font-num); font-weight: 700; font-size: 56px; line-height: .92;
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums; color: var(--tone); white-space: nowrap;
 }
-.num small { font-size: 32px; font-weight: 600; margin-left: 2px; }
+.num small { font-size: 24px; font-weight: 600; margin-left: 1px; }
+.side { display: grid; gap: 3px; min-width: 0; justify-items: start; }
 .feel {
-  font-size: 18px; font-weight: 700; color: var(--tone); background: var(--tone-soft);
-  border-radius: 8px; padding: 2px 10px;
+  font-size: 16px; font-weight: 700; color: var(--tone); background: var(--tone-soft);
+  border-radius: 7px; padding: 1px 9px;
 }
-.sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.wear { font-size: 14px; }
+.wear { font-size: 13px; }
+.meta { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ext { display: flex; gap: 10px; }
+.ext b { font-family: var(--font-num); font-size: 14px; font-weight: 700; color: var(--tone); margin-left: 3px; }
 
 [data-tone="warm"] { --tone: var(--warm); --tone-soft: var(--warm-soft); }
 [data-tone="cool"] { --tone: var(--cool); --tone-soft: var(--cool-soft); }
 [data-tone="same"] { --tone: var(--same); --tone-soft: var(--same-soft); }
 
-.slots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.slots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
 .slot {
-  border-radius: 10px; background: var(--tone-soft); padding: 6px 2px 5px;
-  display: grid; justify-items: center; gap: 0; text-align: center;
+  border-radius: 9px; background: var(--tone-soft); padding: 3px 1px 3px;
+  display: grid; justify-items: center; text-align: center; line-height: 1.15;
 }
-.slot .h { font-size: 11px; color: var(--muted); }
-.slot .d { font-family: var(--font-num); font-weight: 700; font-size: 19px; color: var(--tone); font-variant-numeric: tabular-nums; line-height: 1.2; }
-.slot .t { font-family: var(--font-num); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.slot .h { font-size: 10px; color: var(--muted); }
+.slot .d { font-family: var(--font-num); font-weight: 700; font-size: 17px; color: var(--tone); font-variant-numeric: tabular-nums; }
+.slot .t { font-family: var(--font-num); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .slot.now { outline: 2px solid var(--tone); outline-offset: -2px; }
 
-.extremes { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
-.extremes b { font-family: var(--font-num); font-size: 16px; font-weight: 700; color: var(--tone); font-variant-numeric: tabular-nums; margin-left: 4px; }
-.extremes span { color: var(--muted); }
-
-.chart-panel { gap: 6px; }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
-.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.chart-panel { gap: 2px; padding-bottom: 6px; }
+.legend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
 .chart { width: 100%; height: auto; display: block; }
-.chart text { font-family: var(--font-num); font-size: 11px; fill: var(--muted); }
+.chart text { font-family: var(--font-num); font-size: 10px; fill: var(--muted); }
 
-.msg { font-size: 13px; color: var(--warm); }
-footer { font-size: 11px; color: var(--muted); text-align: center; }
+.msg { font-size: 12px; color: var(--warm); }
+footer { font-size: 10px; color: var(--muted); text-align: center; }
 footer a { color: inherit; }
-@media (max-width: 360px) { .num { font-size: 64px; } .slot .d { font-size: 17px; } }
-@media (prefers-reduced-motion: no-preference) { .panel { transition: border-color .3s; } }
+@media (max-width: 360px) { .num { font-size: 48px; } .slot .d { font-size: 15px; } }
 </style>
 </head>
 <body>
@@ -131,36 +127,35 @@ footer a { color: inherit; }
   <section class="panel" id="p-today" data-tone="same">
     <div class="eyebrow"><span>いま ／ 昨日の同じ時刻と比べて</span><em id="t-now"></em></div>
     <div class="hero">
-      <div class="big"><div class="num" id="t-num">—</div><div class="feel" id="t-feel">…</div></div>
-      <div class="sub" id="t-sub"></div>
+      <div class="num" id="t-num">—</div>
+      <div class="side"><div class="feel" id="t-feel">…</div><div class="wear" id="t-wear"></div></div>
     </div>
-    <div class="wear" id="t-wear"></div>
+    <div class="meta"><span id="t-sub"></span><span class="ext" id="t-ext"></span></div>
     <div class="slots" id="t-slots"></div>
-    <div class="extremes" id="t-ext"></div>
   </section>
 
   <section class="panel" id="p-tomorrow" data-tone="same">
     <div class="eyebrow"><span>明日 ／ 今日の同じ時刻と比べて</span><em id="m-date"></em></div>
     <div class="hero">
-      <div class="big"><div class="num" id="m-num">—</div><div class="feel" id="m-feel">…</div></div>
-      <div class="sub" id="m-sub"></div>
+      <div class="num" id="m-num">—</div>
+      <div class="side"><div class="feel" id="m-feel">…</div><div class="wear" id="m-wear"></div></div>
     </div>
-    <div class="wear" id="m-wear"></div>
+    <div class="meta"><span id="m-sub"></span><span class="ext" id="m-ext"></span></div>
     <div class="slots" id="m-slots"></div>
-    <div class="extremes" id="m-ext"></div>
   </section>
 
   <section class="panel chart-panel">
-    <div class="eyebrow"><span>3日間の気温（0〜24時）</span></div>
-    <div class="legend">
-      <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>昨日</span>
-      <span><i style="border-color:var(--fg)"></i>今日</span>
-      <span><i style="border-color:var(--warm)"></i>明日</span>
+    <div class="eyebrow"><span>3日間の気温</span>
+      <div class="legend">
+        <span><i style="border-top-style:dashed;border-color:var(--muted)"></i>昨日</span>
+        <span><i style="border-color:var(--fg)"></i>今日</span>
+        <span><i style="border-color:var(--warm)"></i>明日</span>
+      </div>
     </div>
-    <svg class="chart" id="chart" viewBox="0 0 340 170" role="img" aria-label="昨日・今日・明日の時間別気温"></svg>
+    <svg class="chart" id="chart" viewBox="0 0 340 150" role="img" aria-label="昨日・今日・明日の時間別気温"></svg>
   </section>
 
-  <footer>気温データ：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（気象モデルの値。昨日分も観測値ではなく解析値）</footer>
+  <footer>データ：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（気象モデル値）</footer>
 </div>
 
 <script>
@@ -182,15 +177,15 @@ footer a { color: inherit; }
   function feel(d) {
     const a = Math.abs(d);
     if (a < 1) return "ほぼ同じ";
-    if (d > 0) return a < 2.5 ? "少し暖かい" : a < 5 ? "暖かい" : a < 8 ? "かなり暖かい" : "別の季節みたいに暖かい";
-    return a < 2.5 ? "少しひんやり" : a < 5 ? "寒い" : a < 8 ? "かなり寒い" : "冬が来たような寒さ";
+    if (d > 0) return a < 2.5 ? "少し暖かい" : a < 5 ? "暖かい" : a < 8 ? "かなり暖かい" : "季節が戻った暖かさ";
+    return a < 2.5 ? "少しひんやり" : a < 5 ? "寒い" : a < 8 ? "かなり寒い" : "冬のような寒さ";
   }
   function wear(d, base) {
-    if (d <= -5) return base + "より上着をしっかり。2枚分くらい寒い";
+    if (d <= -5) return base + "より2枚分厚着を";
     if (d <= -2.5) return base + "より1枚多めに";
-    if (d >= 5) return base + "より2枚分くらい軽くてよさそう";
+    if (d >= 5) return base + "より2枚分軽くてOK";
     if (d >= 2.5) return base + "より1枚少なめでOK";
-    return base + "と同じ服装でよさそう";
+    return base + "と同じ服装でOK";
   }
 
   function byDay(data) {
@@ -217,7 +212,7 @@ footer a { color: inherit; }
   }
   const jpDate = s => { const [, m, d] = s.split("-"); const w = "日月火水木金土"[new Date(s + "T12:00:00Z").getUTCDay()]; return (+m) + "/" + (+d) + "（" + w + "）"; };
 
-  function renderSlots(el, cur, prev, nowH, labelCurFuture) {
+  function renderSlots(el, cur, prev, nowH) {
     el.innerHTML = "";
     SLOT_HOURS.forEach(h => {
       const c = cur[h], p = prev[h];
@@ -232,17 +227,16 @@ footer a { color: inherit; }
       el.appendChild(div);
     });
   }
-  function renderExt(el, cur, prev, label) {
+  function renderExt(el, cur, prev) {
     const dMax = maxOf(cur) - maxOf(prev), dMin = minOf(cur) - minOf(prev);
     el.innerHTML =
-      '<div data-tone="' + tone(dMax) + '">最高 ' + Math.round(maxOf(cur)) + '°<b>' + fmt(dMax) + '</b></div>' +
-      '<div data-tone="' + tone(dMin) + '">最低 ' + Math.round(minOf(cur)) + '°<b>' + fmt(dMin) + '</b></div>' +
-      '<span>' + label + '</span>';
+      '<span data-tone="' + tone(dMax) + '">最高' + Math.round(maxOf(cur)) + '°<b>' + fmt(dMax) + '</b></span>' +
+      '<span data-tone="' + tone(dMin) + '">最低' + Math.round(minOf(cur)) + '°<b>' + fmt(dMin) + '</b></span>';
   }
 
   function renderChart(y, t, m, nowH) {
     const svg = $("chart");
-    const W = 340, H = 170, L = 28, R = 8, T = 10, B = 22;
+    const W = 340, H = 150, L = 26, R = 8, T = 8, B = 18;
     const all = [...y, ...t, ...m].filter(v => v != null);
     let lo = Math.floor(Math.min(...all)) - 1, hi = Math.ceil(Math.max(...all)) + 1;
     const span = hi - lo, step = span > 16 ? 5 : span > 8 ? 2 : 1;
@@ -257,7 +251,7 @@ footer a { color: inherit; }
       s += '<text x="' + (L - 5) + '" y="' + (yy(v) + 3.5) + '" text-anchor="end">' + v + '°</text>';
     }
     [0, 6, 12, 18, 23].forEach(h => {
-      s += '<text x="' + x(h) + '" y="' + (H - 6) + '" text-anchor="' + (h === 23 ? "end" : h === 0 ? "start" : "middle") + '">' + h + '時</text>';
+      s += '<text x="' + x(h) + '" y="' + (H - 4) + '" text-anchor="' + (h === 23 ? "end" : h === 0 ? "start" : "middle") + '">' + h + '時</text>';
     });
     if (nowH != null) s += '<line x1="' + x(nowH) + '" x2="' + x(nowH) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"/>';
     s += '<path d="' + path(y) + '" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="4 3"/>';
@@ -275,7 +269,6 @@ footer a { color: inherit; }
     const Y = days[yStr], T = days[todayStr], M = days[mStr];
     if (!Y || !T || !M) throw new Error("data");
 
-    // 表示時点：キャッシュでも「いま」の時刻で比べる（日付が変わっていたら取得値の時刻）
     const nowJst = new Date(Date.now() + 9 * 3600e3);
     const nowDate = nowJst.toISOString().slice(0, 10);
     let fh = nowJst.getUTCHours() + nowJst.getUTCMinutes() / 60;
@@ -283,7 +276,6 @@ footer a { color: inherit; }
     fh = Math.min(fh, 23);
     const hm = String(Math.floor(fh)).padStart(2, "0") + ":" + String(Math.round((fh % 1) * 60)).padStart(2, "0");
 
-    // いま vs 昨日同時刻
     const nowTemp = (data.current && data.current.temperature_2m != null && nowDate === todayStr) ? data.current.temperature_2m : at(T, fh);
     const yThen = at(Y, fh);
     const d1 = nowTemp - yThen;
@@ -291,22 +283,21 @@ footer a { color: inherit; }
     $("t-now").textContent = jpDate(todayStr) + " " + hm;
     $("t-num").innerHTML = fmt(d1) + "<small>℃</small>";
     $("t-feel").textContent = feel(d1);
-    $("t-sub").textContent = "いま " + nowTemp.toFixed(1) + "℃ ／ 昨日のこの時間 " + yThen.toFixed(1) + "℃";
+    $("t-sub").textContent = "いま" + nowTemp.toFixed(1) + "℃ ／ 昨日" + yThen.toFixed(1) + "℃";
     $("t-wear").textContent = wear(d1, "昨日");
     renderSlots($("t-slots"), T, Y, fh);
-    renderExt($("t-ext"), T, Y, "昨日比");
+    renderExt($("t-ext"), T, Y);
 
-    // 明日同時刻 vs 今日同時刻
     const mThen = at(M, fh), tThen = at(T, fh);
     const d2 = mThen - tThen;
     $("p-tomorrow").dataset.tone = tone(d2);
     $("m-date").textContent = jpDate(mStr) + " " + hm;
     $("m-num").innerHTML = fmt(d2) + "<small>℃</small>";
     $("m-feel").textContent = feel(d2);
-    $("m-sub").textContent = "明日のこの時間 " + mThen.toFixed(1) + "℃ ／ 今日 " + tThen.toFixed(1) + "℃";
+    $("m-sub").textContent = "明日" + mThen.toFixed(1) + "℃ ／ 今日" + tThen.toFixed(1) + "℃";
     $("m-wear").textContent = wear(d2, "今日");
     renderSlots($("m-slots"), M, T, null);
-    renderExt($("m-ext"), M, T, "今日比");
+    renderExt($("m-ext"), M, T);
 
     renderChart(Y, T, M, fh);
 
@@ -336,7 +327,6 @@ footer a { color: inherit; }
     }
   }
 
-  // 前回の値をすぐ表示してから取りに行く
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
     if (c && c.data) { render(c.data, c.at); lastFetch = c.at; }
